@@ -1,6 +1,14 @@
+import sys
+from pathlib import Path
+
 import numpy as np
 
-from spline_shared import NODE_TOL, solve_full
+_root = Path(__file__).resolve().parents[1]
+_rp = str(_root)
+if _rp not in sys.path:
+    sys.path.insert(0, _rp)
+
+from utils import NODE_TOL, solve_full
 
 
 def _build_moment_system(x, y, bc_type, bc_values, dtype):

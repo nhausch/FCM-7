@@ -1,6 +1,14 @@
+import sys
+from pathlib import Path
+
 import numpy as np
 
-from spline_shared import NODE_TOL, solve_full
+_root = Path(__file__).resolve().parents[1]
+_rp = str(_root)
+if _rp not in sys.path:
+    sys.path.insert(0, _rp)
+
+from utils import NODE_TOL, solve_full
 
 
 def _bspline_knot_vector(x, dtype):
@@ -16,7 +24,7 @@ def _bspline_knot_vector(x, dtype):
 
 
 def _B_scalar(x, k, i, t, dtype):
-    """Cox–de Boor B_{i,k}(x); 0/0 treated as 0 (SciPy-style)."""
+    """Cox-de Boor B_{i,k}(x); 0/0 treated as 0 (SciPy-style)."""
     t = np.asarray(t, dtype=dtype).ravel()
     n_basis = t.size - k - 1
     if i < 0 or i >= n_basis or k < 0:
