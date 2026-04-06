@@ -98,8 +98,6 @@ def setup_piecewise_newton(
         if df is None:
             raise ValueError("df is required when hermite=True")
     else:
-
-        # For standard newton interpolation, the degree must be 1, 2, or 3. 
         if degree not in (1, 2, 3):
             raise ValueError("degree must be 1, 2, or 3 when hermite=False")
 
@@ -122,16 +120,12 @@ def setup_piecewise_newton(
 
     return breakpoints, z_list, coeffs_list
 
-
+# Evaluates the piecewise Newton interpolant at x_eval.
+# Points outside [breakpoints[0], breakpoints[-1]] use the first/last panel
+# polynomial (extrapolation).
 def piecewise_newton_eval(
     x_eval, breakpoints, z_list, coeffs_list, dtype=np.float64
 ):
-    """
-    Evaluate the piecewise Newton interpolant at x_eval.
-
-    Points outside [breakpoints[0], breakpoints[-1]] use the first/last panel
-    polynomial (extrapolation).
-    """
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
     breakpoints = np.asarray(breakpoints, dtype=dtype).ravel()
     m = x_eval.size
