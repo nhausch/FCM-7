@@ -8,12 +8,12 @@ NODE_TOL = 1.5 * np.finfo(np.float64).eps
 
 # Builds the Newton divided-difference coefficients.
 def divided_differences_newton(z_nodes, f, fp=None, dtype=np.float64):
-    z_nodes = np.asarray(z, dtype=dtype).ravel()
-    n = z.size
+    z_nodes = np.asarray(z_nodes, dtype=dtype).ravel()
+    n = z_nodes.size
     Q = np.zeros((n, n), dtype=dtype)
     for i in range(n):
-        Q[i, 0] = f(z[i])
-    scale = np.max(np.abs(z)) if n > 0 else dtype(1.0)
+        Q[i, 0] = f(z_nodes[i])
+    scale = np.max(np.abs(z_nodes)) if n > 0 else dtype(1.0)
     tol = NODE_TOL * max(scale, dtype(1.0)) * max(n, 1)
 
     for j in range(1, n):
@@ -26,7 +26,7 @@ def divided_differences_newton(z_nodes, f, fp=None, dtype=np.float64):
                     raise ValueError(
                         "Derivative fp is required for repeated (Hermite) nodes."
                     )
-                Q[i, j] = fp(z[i])
+                Q[i, j] = fp(z_nodes[i])
             else:
                 Q[i, j] = (Q[i, j - 1] - Q[i - 1, j - 1]) / denom
     return np.array([Q[i, i] for i in range(n)], dtype=dtype)
