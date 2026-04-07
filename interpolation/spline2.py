@@ -10,9 +10,9 @@ if _rp not in sys.path:
 
 from utils import NODE_TOL, solve_full
 
-
+# Creates an open clamped cubic knot vector.
+# x0 and xn each have multiplicity p + 1.
 def _bspline_knot_vector(x, dtype):
-    """Open clamped cubic knot vector: x0 and xn each have multiplicity p+1."""
     x = np.asarray(x, dtype=dtype).ravel()
     if x.size < 2:
         raise ValueError("Need at least two mesh points")
@@ -22,9 +22,9 @@ def _bspline_knot_vector(x, dtype):
     inner = x[1:-1]
     return np.concatenate(([x[0]] * (p + 1), inner, [x[-1]] * (p + 1))).astype(dtype)
 
-
+# Evaluates a single B-spline bases function B_{i,k}(x) using Cox-de Boor recursion.
+# Division by 0 is treated as 0.
 def _B_scalar(x, k, i, t, dtype):
-    """Cox-de Boor B_{i,k}(x); 0/0 treated as 0 (SciPy-style)."""
     t = np.asarray(t, dtype=dtype).ravel()
     n_basis = t.size - k - 1
     if i < 0 or i >= n_basis or k < 0:
@@ -47,8 +47,9 @@ def _B_scalar(x, k, i, t, dtype):
     return c1 + c2
 
 
+# Evaluates the first derivative of a single B-spline basis function d/dx B_{i,k}(x).
+# Division by 0 is treated as 0.
 def _dB_scalar(x, k, i, t, dtype):
-    """First derivative d/dx B_{i,k}(x)."""
     if k <= 0:
         return dtype(0.0)
     d1 = t[i + k] - t[i]
@@ -57,9 +58,8 @@ def _dB_scalar(x, k, i, t, dtype):
     t2 = dtype(0.0) if d2 == 0 else dtype(k) / d2 * _B_scalar(x, k - 1, i + 1, t, dtype)
     return t1 - t2
 
-
+# Evaluates the second derivative of a single B-spline basis function d^2/dx^2 B_{i,k}(x).
 def _d2B_scalar(x, k, i, t, dtype):
-    """Second derivative d^2/dx^2 B_{i,k}(x)."""
     if k <= 1:
         return dtype(0.0)
     d1 = t[i + k] - t[i]
@@ -68,30 +68,29 @@ def _d2B_scalar(x, k, i, t, dtype):
     t2 = dtype(0.0) if d2 == 0 else dtype(k) / d2 * _dB_scalar(x, k - 1, i + 1, t, dtype)
     return t1 - t2
 
-
+# Evaluates all basis functions for the given point.
 def _bspline_basis_row(xq, t, p, n_basis, dtype):
     row = np.empty(n_basis, dtype=dtype)
     for j in range(n_basis):
         row[j] = _B_scalar(xq, p, j, t, dtype)
     return row
 
-
+# Evaluates the first derivative of all basis functions for the given point.
 def _bspline_d1_row(xq, t, p, n_basis, dtype):
     row = np.empty(n_basis, dtype=dtype)
     for j in range(n_basis):
         row[j] = _dB_scalar(xq, p, j, t, dtype)
     return row
 
-
+# Evaluates the second derivative of all basis functions for the given point.
 def _bspline_d2_row(xq, t, p, n_basis, dtype):
     row = np.empty(n_basis, dtype=dtype)
     for j in range(n_basis):
         row[j] = _d2B_scalar(xq, p, j, t, dtype)
     return row
 
-
+# Creates the linear system for B-spline coefficients (n + 3 unknowns).
 def _build_spline2_system(x, y, bc_type, bc_values, p, dtype):
-    """Linear system for B-spline coefficients (n+3 unknowns for cubic)."""
     t = _bspline_knot_vector(x, dtype)
     n_mesh = x.size
     n_basis = t.size - p - 1
@@ -146,10 +145,9 @@ def _build_spline2_system(x, y, bc_type, bc_values, p, dtype):
 
     return A, rhs, t
 
-
 def setup_spline2(x, f, bc_type="natural", bc_values=None, dtype=np.float64):
     """
-    Spline Code 2: interpolatory cubic spline, unknowns are cubic B-spline coefficients.
+    Spline Code 2: interpolatory cubic spline on mesh x.
     """
     x = np.asarray(x, dtype=dtype).ravel()
     y = np.asarray(f(x), dtype=dtype).ravel()
@@ -160,9 +158,8 @@ def setup_spline2(x, f, bc_type="natural", bc_values=None, dtype=np.float64):
     c = solve_full(A, rhs, dtype)
     return {"x": x, "y": y, "t": t, "p": p, "c": c, "bc_type": bc_type}
 
-
+# Evaluates s(x) = sum_j c_j B_{j,3}(x) at x_eval (NaN outside by default).
 def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
-    """Evaluate s(x) = sum_j c_j B_{j,3}(x) at x_eval (NaN outside by default)."""
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
     t = spline2["t"]
     c = spline2["c"]
@@ -182,4 +179,3 @@ def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
             s += c[j] * _B_scalar(xv, p, j, t, dtype)
         out[k] = s
     return out
-
