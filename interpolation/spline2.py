@@ -24,10 +24,12 @@ def _bspline_knot_vector(x, dtype):
 
 # Find span index i such that t[i] <= x < t[i+1] (right endpoint included).
 def _find_span(x, t, p, n_basis, dtype):
+
     # Standard convention: if x is at the last knot, clamp to the last span.
     scale = max(dtype(1.0), np.max(np.abs(t)))
     if abs(x - t[-1]) <= NODE_TOL * scale:
         return n_basis - 1
+
     # For open clamped vectors and x in [t[p], t[n_basis]], this yields i in [p, n_basis-1].
     i = int(np.searchsorted(t, x, side="right") - 1)
     return int(np.clip(i, p, n_basis - 1))
@@ -73,7 +75,6 @@ def _B_scalar(x, k, i, t, dtype):
     c1 = dtype(0.0) if d1 == 0 else (x - t[i]) / d1 * _B_scalar(x, k - 1, i, t, dtype)
     c2 = dtype(0.0) if d2 == 0 else (t[i + k + 1] - x) / d2 * _B_scalar(x, k - 1, i + 1, t, dtype)
     return c1 + c2
-
 
 # Evaluates the first derivative of a single B-spline basis function d/dx B_{i,k}(x).
 # Division by 0 is treated as 0.
@@ -209,7 +210,6 @@ def spline2_eval_full(x_eval, spline2, dtype=np.float64, extrapolate=False):
         out[k] = s
     return out
 
-
 # Fast evaluator using local support (only p+1 basis functions per x).
 def spline2_eval_local(x_eval, spline2, dtype=np.float64, extrapolate=False):
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
@@ -231,7 +231,6 @@ def spline2_eval_local(x_eval, spline2, dtype=np.float64, extrapolate=False):
         j0 = i - p
         out[k] = np.dot(c[j0 : j0 + p + 1], N)
     return out
-
 
 # Default evaluator: local support for speed.
 def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):

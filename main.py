@@ -1,13 +1,11 @@
 """
 Interpolation validation CLI.
 
-Run from the FCM-7 directory:
+python main.py --mesh uniform --n 17 --function cubic --bc clamped --dense 2000
 
-  python main.py --mesh uniform --n 17 --function cubic --bc clamped --dense 2000
+Adds interpolation/ on sys.path so local imports resolve.
 
-Adds interpolation/ on sys.path so local imports resolve (same as sibling modules).
-
-Complexity (order of growth, informal): spline setup solves a dense (n+1)x(n+1) or
+Complexity (order of growth, informal): spline setup solves a dense (n + 1) x (n + 1) or
 least-squares-style system — O(n^3) with numpy.linalg.solve; spline1_eval is O(1) per
 point; spline2_eval (local support: span search + four cubic bases) is O(log n) per
 point in mesh size n; spline2_eval_full sums all bases with recursive Cox-de Boor —
