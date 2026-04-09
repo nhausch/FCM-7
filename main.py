@@ -9,8 +9,10 @@ Adds interpolation/ on sys.path so local imports resolve (same as sibling module
 
 Complexity (order of growth, informal): spline setup solves a dense (n+1)x(n+1) or
 least-squares-style system — O(n^3) with numpy.linalg.solve; spline1_eval is O(1) per
-point; spline2_eval uses scalar Cox–de Boor per basis per point — O(n) per point;
-barycentric1_eval is O(n) per point; piecewise Newton is O(panels * degree) per point.
+point; spline2_eval (local support: span search + four cubic bases) is O(log n) per
+point in mesh size n; spline2_eval_full sums all bases with recursive Cox-de Boor —
+O(n) per point; barycentric1_eval is O(n) per point; piecewise Newton is
+O(panels * degree) per point.
 """
 
 from __future__ import annotations

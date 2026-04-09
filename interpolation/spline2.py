@@ -22,6 +22,34 @@ def _bspline_knot_vector(x, dtype):
     inner = x[1:-1]
     return np.concatenate(([x[0]] * (p + 1), inner, [x[-1]] * (p + 1))).astype(dtype)
 
+# Find span index i such that t[i] <= x < t[i+1] (right endpoint included).
+def _find_span(x, t, p, n_basis, dtype):
+    # Standard convention: if x is at the last knot, clamp to the last span.
+    scale = max(dtype(1.0), np.max(np.abs(t)))
+    if abs(x - t[-1]) <= NODE_TOL * scale:
+        return n_basis - 1
+    # For open clamped vectors and x in [t[p], t[n_basis]], this yields i in [p, n_basis-1].
+    i = int(np.searchsorted(t, x, side="right") - 1)
+    return int(np.clip(i, p, n_basis - 1))
+
+# Compute basis functions N[0..p] that are nonzero at x for span i.
+def _basis_funs(i, x, t, p, dtype):
+    N = np.zeros(p + 1, dtype=dtype)
+    left = np.zeros(p + 1, dtype=dtype)
+    right = np.zeros(p + 1, dtype=dtype)
+    N[0] = dtype(1.0)
+    for j in range(1, p + 1):
+        left[j] = x - t[i + 1 - j]
+        right[j] = t[i + j] - x
+        saved = dtype(0.0)
+        for r in range(0, j):
+            denom = right[r + 1] + left[j - r]
+            temp = dtype(0.0) if denom == 0 else N[r] / denom
+            N[r] = saved + right[r + 1] * temp
+            saved = left[j - r] * temp
+        N[j] = saved
+    return N
+
 # Evaluates a single B-spline bases function B_{i,k}(x) using Cox-de Boor recursion.
 # Division by 0 is treated as 0.
 def _B_scalar(x, k, i, t, dtype):
@@ -159,7 +187,8 @@ def setup_spline2(x, f, bc_type="natural", bc_values=None, dtype=np.float64):
     return {"x": x, "y": y, "t": t, "p": p, "c": c, "bc_type": bc_type}
 
 # Evaluates s(x) = sum_j c_j B_{j,3}(x) at x_eval (NaN outside by default).
-def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
+# Reference implementation: global sum over all basis functions.
+def spline2_eval_full(x_eval, spline2, dtype=np.float64, extrapolate=False):
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
     t = spline2["t"]
     c = spline2["c"]
@@ -179,3 +208,31 @@ def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
             s += c[j] * _B_scalar(xv, p, j, t, dtype)
         out[k] = s
     return out
+
+
+# Fast evaluator using local support (only p+1 basis functions per x).
+def spline2_eval_local(x_eval, spline2, dtype=np.float64, extrapolate=False):
+    x_eval = np.asarray(x_eval, dtype=dtype).ravel()
+    t = spline2["t"]
+    c = spline2["c"]
+    p = int(spline2["p"])
+    x0, xn = spline2["x"][0], spline2["x"][-1]
+    n_basis = c.size
+    m = x_eval.size
+    out = np.empty(m, dtype=dtype)
+
+    for k in range(m):
+        xv = x_eval[k]
+        if not extrapolate and (xv < x0 or xv > xn):
+            out[k] = np.nan
+            continue
+        i = _find_span(xv, t, p, n_basis, dtype)
+        N = _basis_funs(i, xv, t, p, dtype)
+        j0 = i - p
+        out[k] = np.dot(c[j0 : j0 + p + 1], N)
+    return out
+
+
+# Default evaluator: local support for speed.
+def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
+    return spline2_eval_local(x_eval, spline2, dtype=dtype, extrapolate=extrapolate)
