@@ -221,12 +221,40 @@ def spline2_eval_local(x_eval, spline2, dtype=np.float64, extrapolate=False):
     m = x_eval.size
     out = np.empty(m, dtype=dtype)
 
+    is_sorted = True
+    for k in range(1, m):
+        if x_eval[k] < x_eval[k - 1]:
+            is_sorted = False
+            break
+
+    if not is_sorted:
+        for k in range(m):
+            xv = x_eval[k]
+            if not extrapolate and (xv < x0 or xv > xn):
+                out[k] = np.nan
+                continue
+            i = _find_span(xv, t, p, n_basis, dtype)
+            N = _basis_funs(i, xv, t, p, dtype)
+            j0 = i - p
+            out[k] = np.dot(c[j0 : j0 + p + 1], N)
+        return out
+
+    # Span-walk fast path for nondecreasing x_eval.
+    i = p
     for k in range(m):
         xv = x_eval[k]
         if not extrapolate and (xv < x0 or xv > xn):
             out[k] = np.nan
             continue
-        i = _find_span(xv, t, p, n_basis, dtype)
+        if i == p:
+            i = _find_span(xv, t, p, n_basis, dtype)
+        else:
+            scale = max(dtype(1.0), abs(t[-1]))
+            if abs(xv - t[-1]) <= NODE_TOL * scale:
+                i = n_basis - 1
+            else:
+                while i < n_basis - 1 and xv >= t[i + 1]:
+                    i += 1
         N = _basis_funs(i, xv, t, p, dtype)
         j0 = i - p
         out[k] = np.dot(c[j0 : j0 + p + 1], N)
