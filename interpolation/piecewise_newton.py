@@ -87,10 +87,15 @@ def setup_piecewise_newton(
     breakpoint_mesh="uniform",
     local_nodes="uniform",
     dtype=np.float64,
+    breakpoints=None,
 ):
     """
     Precomputes piecewise Newton interpolants on [a,b] by partitioning into
-    the given number of subintervals. 
+    the given number of subintervals.
+
+    If breakpoints is not None, it must be a strictly increasing 1D array of
+    length num_subintervals + 1; a and b are ignored for mesh construction (use
+    breakpoints[0] and breakpoints[-1] as the domain).
 
     If hermite is False:
         degree must be 1, 2, or 3. On each [ai, bi], interpolate f at degree+1
@@ -119,7 +124,17 @@ def setup_piecewise_newton(
         if degree not in (1, 2, 3):
             raise ValueError("degree must be 1, 2, or 3 when hermite=False")
 
-    breakpoints = build_mesh(breakpoint_mesh, a, b, num_subintervals + 1, dtype)
+    if breakpoints is not None:
+        breakpoints = np.asarray(breakpoints, dtype=dtype).ravel()
+        if breakpoints.size != num_subintervals + 1:
+            raise ValueError(
+                "breakpoints must have length num_subintervals + 1 "
+                f"(got {breakpoints.size}, expected {num_subintervals + 1})"
+            )
+        if np.any(np.diff(breakpoints) <= 0):
+            raise ValueError("breakpoints must be strictly increasing")
+    else:
+        breakpoints = build_mesh(breakpoint_mesh, a, b, num_subintervals + 1, dtype)
     M = num_subintervals
     z_list = []
     coeffs_list = []

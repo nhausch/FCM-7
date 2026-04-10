@@ -53,6 +53,30 @@ def test_divided_differences_hermite_cubic():
         assert abs(dp - fp(t)) < ATOL
 
 
+def test_setup_piecewise_newton_explicit_breakpoints():
+    """Nonuniform breakpoints (irregular mesh) must match piecewise-linear data."""
+    t = np.array([0.5, 1.0, 2.0], dtype=np.float64)
+    y = np.array([1.0, 2.0, 2.5], dtype=np.float64)
+
+    def f(z: float) -> float:
+        return float(np.interp(z, t, y))
+
+    breakpoints, z_list, coeffs_list = setup_piecewise_newton(
+        float(t[0]),
+        float(t[-1]),
+        t.size - 1,
+        f,
+        degree=1,
+        local_nodes="uniform",
+        breakpoints=t,
+    )
+    assert np.allclose(breakpoints, t)
+    xx = np.array([0.75, 1.5], dtype=np.float64)
+    pn = piecewise_newton_eval(xx, breakpoints, z_list, coeffs_list)
+    truth = np.interp(xx, t, y)
+    assert np.max(np.abs(pn - truth)) < 1e-12
+
+
 def test_piecewise_newton_deriv_matches_global_cubic():
     a, b = -1.0, 1.0
     n = 11
