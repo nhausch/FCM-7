@@ -260,6 +260,66 @@ def spline2_eval_local(x_eval, spline2, dtype=np.float64, extrapolate=False):
         out[k] = np.dot(c[j0 : j0 + p + 1], N)
     return out
 
+
+def _local_deriv1_dot(xv, p, j0, c, t, dtype):
+    acc = dtype(0.0)
+    for r in range(p + 1):
+        acc += c[j0 + r] * _dB_scalar(xv, p, j0 + r, t, dtype)
+    return acc
+
+
+# First derivative s'(x) using local support (same span logic as spline2_eval_local).
+def spline2_deriv1_eval_local(x_eval, spline2, dtype=np.float64, extrapolate=False):
+    x_eval = np.asarray(x_eval, dtype=dtype).ravel()
+    t = spline2["t"]
+    c = spline2["c"]
+    p = int(spline2["p"])
+    x0, xn = spline2["x"][0], spline2["x"][-1]
+    n_basis = c.size
+    m = x_eval.size
+    out = np.empty(m, dtype=dtype)
+
+    is_sorted = True
+    for k in range(1, m):
+        if x_eval[k] < x_eval[k - 1]:
+            is_sorted = False
+            break
+
+    if not is_sorted:
+        for k in range(m):
+            xv = x_eval[k]
+            if not extrapolate and (xv < x0 or xv > xn):
+                out[k] = np.nan
+                continue
+            i = _find_span(xv, t, p, n_basis, dtype)
+            j0 = i - p
+            out[k] = _local_deriv1_dot(xv, p, j0, c, t, dtype)
+        return out
+
+    i = p
+    for k in range(m):
+        xv = x_eval[k]
+        if not extrapolate and (xv < x0 or xv > xn):
+            out[k] = np.nan
+            continue
+        if i == p:
+            i = _find_span(xv, t, p, n_basis, dtype)
+        else:
+            scale = max(dtype(1.0), abs(t[-1]))
+            if abs(xv - t[-1]) <= NODE_TOL * scale:
+                i = n_basis - 1
+            else:
+                while i < n_basis - 1 and xv >= t[i + 1]:
+                    i += 1
+        j0 = i - p
+        out[k] = _local_deriv1_dot(xv, p, j0, c, t, dtype)
+    return out
+
+
+def spline2_deriv1_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
+    return spline2_deriv1_eval_local(x_eval, spline2, dtype=dtype, extrapolate=extrapolate)
+
+
 # Default evaluator: local support for speed.
 def spline2_eval(x_eval, spline2, dtype=np.float64, extrapolate=False):
     return spline2_eval_local(x_eval, spline2, dtype=dtype, extrapolate=extrapolate)
