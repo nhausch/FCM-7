@@ -7,12 +7,26 @@ This repository contains a small CLI (`main.py`) to compare multiple interpolati
 - `barycentric1`
 - `piecewise_newton` (optionally Hermite)
 
+## Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+(NumPy and SciPy are listed for reference comparisons and tests; `main.py` uses NumPy only.)
+
 ## Quick start
 
 Run from the `FCM-7` directory:
 
 ```bash
 python3 main.py --mesh uniform --n 17 --function cubic --bc clamped --dense 2000
+```
+
+Task 2 reference comparison (your `spline2` / piecewise Newton vs SciPy / `numpy.interp`):
+
+```bash
+python3 task_2_compare_reference.py
 ```
 
 ## Test command set
