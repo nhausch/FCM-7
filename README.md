@@ -63,3 +63,6 @@ Spline setup solves a dense \((n+1)\times(n+1)\) or least-squares-style system �
 nondecreasing (span-walk fast path); `spline2_eval_full` sums all bases with recursive Cox-de Boor — \(O(n)\) per point;
 `barycentric1_eval` is \(O(n)\) per point; piecewise Newton is \(O(\text{panels} \cdot \text{degree})\) per point.
 
+## Piecewise Newton derivative
+
+`piecewise_newton_deriv1_eval` returns the derivative of the **local** Newton polynomial on the same panel chosen for `piecewise_newton_eval` (`numpy.searchsorted(breakpoints, x, side="right") - 1`, with the same clipping and extrapolation behavior). At an interior breakpoint, that is the **right-hand** panel’s derivative. If the underlying piecewise interpolant is only \(C^0\) at a knot, left and right derivatives of the analytic target can differ; the evaluator follows the value rule, so the derivative there is one-sided from the right interval.

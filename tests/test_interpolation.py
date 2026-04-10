@@ -18,7 +18,14 @@ if str(_INTERP) not in sys.path:
 
 from barycentric_form1 import barycentric1_eval, setup_barycentric1
 from meshes import build_mesh
-from piecewise_newton import divided_differences_newton, newton_horner, piecewise_newton_eval, setup_piecewise_newton
+from piecewise_newton import (
+    divided_differences_newton,
+    newton_horner,
+    newton_horner_deriv1,
+    piecewise_newton_deriv1_eval,
+    piecewise_newton_eval,
+    setup_piecewise_newton,
+)
 from spline1 import setup_spline1, spline1_eval
 from spline2 import setup_spline2, spline2_eval
 from test_functions import get_function_spec, spline_bc_values
@@ -42,6 +49,31 @@ def test_divided_differences_hermite_cubic():
     for t in np.linspace(a, b, 20):
         p = newton_horner(t, z, c, dtype=np.float64)
         assert abs(p - f(t)) < ATOL
+        dp = newton_horner_deriv1(t, z, c, dtype=np.float64)
+        assert abs(dp - fp(t)) < ATOL
+
+
+def test_piecewise_newton_deriv_matches_global_cubic():
+    a, b = -1.0, 1.0
+    n = 11
+    x = build_mesh("uniform", a, b, n)
+    spec = get_function_spec("cubic")
+    f = spec["f"]
+    df = spec["df"]
+    breakpoints, z_list, coeffs_list = setup_piecewise_newton(
+        a,
+        b,
+        n - 1,
+        f,
+        degree=3,
+        breakpoint_mesh="uniform",
+        local_nodes="uniform",
+    )
+    assert np.allclose(breakpoints, x, rtol=0, atol=1e-14)
+    xx = np.linspace(a, b, 400)
+    dp_hat = piecewise_newton_deriv1_eval(xx, breakpoints, z_list, coeffs_list)
+    truth = np.asarray(df(xx), dtype=np.float64).ravel()
+    assert np.max(np.abs(dp_hat - truth)) < 1e-9
 
 
 def test_spline1_agrees_spline2_clamped_cubic():

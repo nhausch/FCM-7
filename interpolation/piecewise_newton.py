@@ -45,6 +45,24 @@ def newton_horner(x, z_nodes, coeffs, dtype=np.float64):
     return p
 
 
+def newton_horner_deriv1(x, z_nodes, coeffs, dtype=np.float64):
+    """
+    First derivative of the Newton interpolant at x (same z_nodes and coeffs as
+    newton_horner). Uses the coupled Horner recurrence; no finite differencing.
+    """
+    z_nodes = np.asarray(z_nodes, dtype=dtype).ravel()
+    coeffs = np.asarray(coeffs, dtype=dtype).ravel()
+    n = coeffs.size
+    if n == 0:
+        return dtype(0.0)
+    p = coeffs[n - 1]
+    dp = dtype(0.0)
+    for k in range(n - 2, -1, -1):
+        dp = p + (x - z_nodes[k]) * dp
+        p = coeffs[k] + (x - z_nodes[k]) * p
+    return dp
+
+
 # Computes the local nodes for a given interval and mesh type.
 def _local_nodes(ai, bi, degree, local_nodes, dtype=np.float64):
 
@@ -140,4 +158,32 @@ def piecewise_newton_eval(
     for k in range(m):
         j = int(idx[k])
         out[k] = newton_horner(x_eval[k], z_list[j], coeffs_list[j], dtype=dtype)
+    return out
+
+
+def piecewise_newton_deriv1_eval(
+    x_eval, breakpoints, z_list, coeffs_list, dtype=np.float64
+):
+    """
+    First derivative of the piecewise Newton interpolant. Uses the same panel
+    index as piecewise_newton_eval (searchsorted side='right'), so at an
+    interior breakpoint the derivative is one-sided from the right-hand panel
+    when the global interpolant is only C0.
+    """
+    x_eval = np.asarray(x_eval, dtype=dtype).ravel()
+    breakpoints = np.asarray(breakpoints, dtype=dtype).ravel()
+    m = x_eval.size
+    out = np.empty(m, dtype=dtype)
+    n_pieces = len(z_list)
+
+    idx = np.searchsorted(breakpoints, x_eval, side="right") - 1
+    idx = np.clip(idx, 0, n_pieces - 1)
+    idx[x_eval < breakpoints[0]] = 0
+    idx[x_eval > breakpoints[-1]] = n_pieces - 1
+
+    for k in range(m):
+        j = int(idx[k])
+        out[k] = newton_horner_deriv1(
+            x_eval[k], z_list[j], coeffs_list[j], dtype=dtype
+        )
     return out
